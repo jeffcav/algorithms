@@ -44,24 +44,41 @@ static void criar_conjunto(struct conjunto* c, struct vertice *v)
 	c->pos = 0;
 }
 
-static struct conjunto * raiz(struct conjunto *c)
+static struct conjunto * raiz_conjunto(struct conjunto *u)
 {
-	struct conjunto *k = c;
+	struct conjunto *k = u;
 	while (k != k->pai) {
 		k = k->pai;
 	}
 	return k;
 }
 
+static void unir_conjuntos(struct conjunto *u, struct conjunto *v)
+{
+	struct conjunto *Ru = raiz_conjunto(u);
+	struct conjunto *Rv = raiz_conjunto(v);
+	
+	if (Ru == Rv)
+		return;
+	if (Ru->pos > Rv->pos) {
+		Rv->pai = Ru;
+	} else {
+		Ru->pai = Rv;
+		if (Ru->pos == Rv->pos)
+			Rv->pos += 1;
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	struct grafo g;
-	int N, i, j;
+	int N, i, j, agm_size;
+	
 	struct conjunto *conjuntos;
 	struct aresta **ordenada;
+	struct aresta **AGM;
 	
 	scanf("%d", &N);
-	
 	conjuntos = (struct conjunto*) malloc(N * sizeof(struct conjunto));
 	
 	/*
@@ -85,19 +102,47 @@ int main(int argc, char *argv[])
 	/*
 	 * Algoritmo de kruskal para encontrar uma AGM
 	 */
+	
+	/*
+	 * MAKESET
+	 */
 	for (i = 0; i < N; i++) {
 		criar_conjunto(&conjuntos[i], &g.vertices[i]);
 	}
 	
+	/*
+	 * ORDENAR ARESTAS
+	 */
 	ordenada =  (struct aresta**) malloc(N * sizeof(struct aresta*));
 	ordenar_arestas(&g, ordenada);
 	
 	
+	/*
+	 * MONTAR SUBÁRVORES
+	 */
+	AGM = (struct aresta**) malloc(N * sizeof(struct aresta*));
+	agm_size = 0;
+	
 	for (i = 0; i < N; i++) {
-		if (raiz(&conjuntos[ordenada[i]->origem->nome]) != raiz(&conjuntos[ordenada[i]->destino->nome])) {
-			printf("diff\n");
+		if (raiz_conjunto(&conjuntos[ordenada[i]->origem->nome]) !=
+			raiz_conjunto(&conjuntos[ordenada[i]->destino->nome])
+		) {
+			
+			AGM[agm_size++] = ordenada[i];
+			
+			unir_conjuntos(&conjuntos[ordenada[i]->origem->nome], 
+				       &conjuntos[ordenada[i]->destino->nome]);
 		}
 	}
+	
+	/*
+	 * Imprimindo AGM
+	 */
+	for (i = 0; i < agm_size; i++) {
+		printf("%d -> %d w=%d\n", AGM[i]->origem->nome, 
+		       AGM[i]->destino->nome, AGM[i]->peso);
+	}
+	
 	
 	/*
 	 * Desalocando memória
@@ -108,6 +153,7 @@ int main(int argc, char *argv[])
 	free(g.vertices);
 	free(conjuntos);
 	free(ordenada);
+	free(AGM);
 	
 	return 0;
 }
