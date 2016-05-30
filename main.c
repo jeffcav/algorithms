@@ -14,12 +14,8 @@ static void ordenar_arestas(struct grafo *g, struct aresta **ord)
 	 */
 	k = 0;
 	for (i = 0; i < N; i++) {
-		for (j = i; j < N; j++) {
-			if (i == j) {
-				continue;
-			} else { //:)
-				ord[k++] = &g->vertices[i].arestas[j];
-			}
+		for (j = 0; j < i; j++) {
+			ord[k++] = &g->vertices[i].arestas[j];
 		}
 	}
 	
@@ -72,11 +68,15 @@ static void unir_conjuntos(struct conjunto *u, struct conjunto *v)
 int main(int argc, char *argv[])
 {
 	struct grafo g;
-	int N, i, j, agm_size;
+	int N, i, j, k, agm_size;
+	int origem, destino;
 	
 	struct conjunto *conjuntos;
 	struct aresta **ordenada;
 	struct aresta **AGM;
+	
+	struct aresta modificada;
+	struct aresta *swap;
 	
 	scanf("%d", &N);
 	conjuntos = (struct conjunto*) malloc(N * sizeof(struct conjunto));
@@ -116,7 +116,6 @@ int main(int argc, char *argv[])
 	ordenada =  (struct aresta**) malloc(N * sizeof(struct aresta*));
 	ordenar_arestas(&g, ordenada);
 	
-	
 	/*
 	 * MONTAR SUBÁRVORES
 	 */
@@ -136,24 +135,172 @@ int main(int argc, char *argv[])
 	}
 	
 	/*
-	 * Imprimindo AGM
+	 * Imprimindo AGM. 
+	 * Nota: agm_size deve ser igual a N-1
 	 */
 	for (i = 0; i < agm_size; i++) {
 		printf("%d -> %d w=%d\n", AGM[i]->origem->nome, 
 		       AGM[i]->destino->nome, AGM[i]->peso);
 	}
 	
+	for (i = 0; i < N; i++) {
+		printf("aresta: %d, raiz: %d pai: %d\n", 
+		       conjuntos[i].vert->nome,
+			((struct conjunto*)raiz_conjunto(&conjuntos[i]))->vert->nome,
+			conjuntos[i].pai->vert->nome
+			);
+	}
 	
+	/*
+	 * Ler mudança de peso em aresta (5.22)
+	 */
+	scanf("%d", &origem);
+	scanf("%d", &destino);
+	scanf("%d", &modificada.peso);
+	modificada.origem = &g.vertices[origem];
+	modificada.destino = &g.vertices[destino];
+	
+	/*
+	 * Identificar aresta que mudou no vetor de arestas ordenadas
+	 */
+	
+	for (i = 0; i < N; i++) {
+		if (ordenada[i]->peso > modificada.peso)
+			break;
+	}
+	
+	for (j = 0; j < N; j++) {
+		if ((ordenada[j]->origem->nome == modificada.origem->nome) &&
+			(ordenada[j]->destino->nome == modificada.destino->nome)
+		)
+			break;
+	}
+	
+	/*
+	 * Reposicionar aresta modificada no vetor de arestas ordenadas
+	 */
+	
+	if (i == j)
+		goto end;
+	
+	if (i < j) { //PESO DIMINUIU
+		
+		for (k = 0; k < agm_size; k++) { //SE ESTA NA AGM, NADA A FAZER
+			if ((AGM[k]->origem->nome == modificada.origem->nome) &&
+				(AGM[k]->destino->nome == modificada.destino->nome)) {
+				
+				break;
+			}
+		}
+		if (k < agm_size)
+			goto end;
+		
+		
+		ordenada[j]->peso = modificada.peso;
+		while (ordenada[i]->peso > ordenada[j]->peso) {
+			swap = ordenada[j-1];
+			ordenada[j-1] = ordenada[j];
+			ordenada[j] = swap;
+			j--;
+		}
+	} else { //PESO AUMENTOU
+		
+		for (k = 0; k < agm_size; k++) { //SE NAO ESTA NA AGM, NADA A FAZER
+			if ((AGM[k]->origem->nome == modificada.origem->nome) &&
+				(AGM[k]->destino->nome == modificada.destino->nome)) {
+				
+				break;
+			}
+		}
+		if (k == agm_size)
+			goto end;
+		
+		
+		ordenada[j]->peso = modificada.peso;
+		while (ordenada[j]->peso < ordenada[j+1]->peso) {
+			swap = ordenada[j+1];
+			ordenada[j+1] = ordenada[j];
+			ordenada[j] = swap;
+			j++;
+		}
+	}
+	
+	/*
+	 * TODO: Cortar subárvore não ótima
+	 */
+	
+	for (i = 0; i < agm_size; i++) {
+		if( AGM[i] == ordenada[i]) {
+			continue;
+		}
+		else { //Separar subárvore
+			
+			int pos_origem = conjuntos[AGM[i]->origem->nome].pos;
+			int pos_destino = conjuntos[AGM[i]->destino->nome].pos;
+			
+			if (pos_origem < pos_destino) { //cortar origem
+				conjuntos[AGM[i]->origem->nome].pai = &conjuntos[AGM[i]->origem->nome];
+			} else if (pos_origem > pos_destino) {
+				conjuntos[AGM[i]->destino->nome].pai = &conjuntos[AGM[i]->destino->nome];
+			} else {
+				printf("CONCLUIR\n");
+			}
+			
+			break;
+		}
+	}
+	
+	/*
+	 * Nada mudou
+	 */
+	if (i == agm_size) 
+		goto end;
+	
+	/*
+	 * TODO: Remontar parte da AGM
+	 */
+	agm_size = i;
+	for (j = i; j < N; j++) {
+		printf("%d diff %d\n", ordenada[j]->origem->nome, ordenada[j]->destino->nome);
+		
+		if (raiz_conjunto(&conjuntos[ordenada[j]->origem->nome]) !=
+			raiz_conjunto(&conjuntos[ordenada[j]->destino->nome])
+		) {
+			printf("%d diff %d\n", ordenada[j]->origem->nome, ordenada[j]->destino->nome);
+			AGM[agm_size++] = ordenada[j];
+			
+			unir_conjuntos(&conjuntos[ordenada[j]->origem->nome], 
+				       &conjuntos[ordenada[j]->destino->nome]);
+		}
+	}
+	
+	/*
+	 * Imprimindo nova AGM. 
+	 * Nota: agm_size deve ser igual a N-1
+	 */
+	printf("agm size=%d\n", agm_size);
+	for (i = 0; i < agm_size; i++) {
+		printf("%d -> %d w=%d\n", AGM[i]->origem->nome, 
+		       AGM[i]->destino->nome, AGM[i]->peso);
+	}
+
+end:
 	/*
 	 * Desalocando memória
 	 */
+	//free(AGM);
+	
+	/*
 	for (i = 0; i < N; i++) {
 		free(g.vertices[i].arestas);
 	}
+	*/
+	
 	free(g.vertices);
+	
 	free(conjuntos);
+	
 	free(ordenada);
-	free(AGM);
 	
 	return 0;
 }
