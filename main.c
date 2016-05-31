@@ -4,10 +4,11 @@
 
 static void ordenar_arestas(struct grafo *g, struct aresta **ord)
 {
-	int i, j, k, N;
+	int i, j, k, N, narestas, min;
 	struct aresta *s;
 	
 	N = g->N;
+	narestas = (N*(N-1))/2;
 	
 	/*
 	 * Montar vetor desordenado de arestas
@@ -22,13 +23,17 @@ static void ordenar_arestas(struct grafo *g, struct aresta **ord)
 	/*
 	 * Ordenar vetor de arestas
 	 */
-	for (i = 0; i < (N - 1); i++) {
-		for (j = i+1; j < N; j++) {
-			if (ord[j]->peso < ord[i]->peso) {
-				s = ord[i];
-				ord[i] = ord[j];
-				ord[j] = s;
-			}
+	
+	for (i = 0; i < (narestas - 1); i++) {
+		min = i;
+		for (j = i+1; j < narestas; j++) {
+			if (ord[j]->peso < ord[min]->peso)
+				min = j;
+		}
+		if (min != i) {
+			s = ord[i];
+			ord[i] = ord[min];
+			ord[min] = s;
 		}
 	}
 }
@@ -68,7 +73,7 @@ static void unir_conjuntos(struct conjunto *u, struct conjunto *v)
 int main(int argc, char *argv[])
 {
 	struct grafo g;
-	int N, i, j, k, agm_size;
+	int N, i, j, k, agm_size, narestas;
 	int origem, destino;
 	
 	struct conjunto *conjuntos;
@@ -79,7 +84,8 @@ int main(int argc, char *argv[])
 	struct aresta *swap;
 	
 	scanf("%d", &N);
-	conjuntos = (struct conjunto*) malloc(N * sizeof(struct conjunto));
+	narestas = (N*(N-1))/2;
+	printf("Inicializando grafo com %d vertices e %d arestas.\n", N, narestas);
 	
 	/*
 	 * Inicializando o grafo como listas de adjacências
@@ -102,10 +108,12 @@ int main(int argc, char *argv[])
 	/*
 	 * Algoritmo de kruskal para encontrar uma AGM
 	 */
+	printf("Encontrando AGM:\n");
 	
 	/*
 	 * MAKESET
 	 */
+	conjuntos = (struct conjunto*) malloc(N * sizeof(struct conjunto));
 	for (i = 0; i < N; i++) {
 		criar_conjunto(&conjuntos[i], &g.vertices[i]);
 	}
@@ -113,13 +121,25 @@ int main(int argc, char *argv[])
 	/*
 	 * ORDENAR ARESTAS
 	 */
-	ordenada =  (struct aresta**) malloc(N * sizeof(struct aresta*));
+	printf("Ordenando arestas...\n");
+	
+	ordenada =  (struct aresta**) malloc(narestas * sizeof(struct aresta*));
 	ordenar_arestas(&g, ordenada);
+	
+	for (i = 0; i < narestas; i++) {
+		printf("origem=%d, destino=%d, peso=%d\n", 
+			ordenada[i]->origem->nome,
+			ordenada[i]->destino->nome,
+			ordenada[i]->peso);
+	}
+	printf("\n");
 	
 	/*
 	 * MONTAR SUBÁRVORES
 	 */
-	AGM = (struct aresta**) malloc(N * sizeof(struct aresta*));
+	
+	printf("Montando subarvores...\n");
+	AGM = (struct aresta**) malloc(N * sizeof(struct aresta*)); //N-1
 	agm_size = 0;
 	
 	for (i = 0; i < N; i++) {
@@ -138,6 +158,7 @@ int main(int argc, char *argv[])
 	 * Imprimindo AGM. 
 	 * Nota: agm_size deve ser igual a N-1
 	 */
+	
 	for (i = 0; i < agm_size; i++) {
 		printf("%d -> %d w=%d\n", AGM[i]->origem->nome, 
 		       AGM[i]->destino->nome, AGM[i]->peso);
@@ -154,6 +175,8 @@ int main(int argc, char *argv[])
 	/*
 	 * Ler mudança de peso em aresta (5.22)
 	 */
+	printf("Identificando mudanca em aresta...\n");
+	
 	scanf("%d", &origem);
 	scanf("%d", &destino);
 	scanf("%d", &modificada.peso);
@@ -164,12 +187,12 @@ int main(int argc, char *argv[])
 	 * Identificar aresta que mudou no vetor de arestas ordenadas
 	 */
 	
-	for (i = 0; i < N; i++) {
+	for (i = 0; i < narestas; i++) {
 		if (ordenada[i]->peso > modificada.peso)
 			break;
 	}
 	
-	for (j = 0; j < N; j++) {
+	for (j = 0; j < narestas; j++) {
 		if ((ordenada[j]->origem->nome == modificada.origem->nome) &&
 			(ordenada[j]->destino->nome == modificada.destino->nome)
 		)
@@ -184,7 +207,8 @@ int main(int argc, char *argv[])
 		goto end;
 	
 	if (i < j) { //PESO DIMINUIU
-		
+		printf("Peso diminuiu, reordenando arestas...\n");
+		/*
 		for (k = 0; k < agm_size; k++) { //SE ESTA NA AGM, NADA A FAZER
 			if ((AGM[k]->origem->nome == modificada.origem->nome) &&
 				(AGM[k]->destino->nome == modificada.destino->nome)) {
@@ -192,9 +216,11 @@ int main(int argc, char *argv[])
 				break;
 			}
 		}
-		if (k < agm_size)
+		if (k < agm_size) {
+			printf(" mas ja pertence a AGM\n");
 			goto end;
-		
+		}
+		*/
 		
 		ordenada[j]->peso = modificada.peso;
 		while (ordenada[i]->peso > ordenada[j]->peso) {
@@ -204,7 +230,7 @@ int main(int argc, char *argv[])
 			j--;
 		}
 	} else { //PESO AUMENTOU
-		
+		printf("Peso aumentou");
 		for (k = 0; k < agm_size; k++) { //SE NAO ESTA NA AGM, NADA A FAZER
 			if ((AGM[k]->origem->nome == modificada.origem->nome) &&
 				(AGM[k]->destino->nome == modificada.destino->nome)) {
@@ -212,10 +238,12 @@ int main(int argc, char *argv[])
 				break;
 			}
 		}
-		if (k == agm_size)
+		if (k == agm_size) {
+			printf(", mas nao pertence a AGM e nao ha nada a fazer.\n");
 			goto end;
+		}
 		
-		
+		printf(", reordenando arestas...\n");
 		ordenada[j]->peso = modificada.peso;
 		while (ordenada[j]->peso < ordenada[j+1]->peso) {
 			swap = ordenada[j+1];
@@ -223,6 +251,10 @@ int main(int argc, char *argv[])
 			ordenada[j] = swap;
 			j++;
 		}
+	}
+	
+	for (i = 0; i < narestas; i++) {
+		printf("origem=%d, destino=%d, peso=%d\n", ordenada[i]->origem->nome, ordenada[i]->destino->nome, ordenada[i]->peso);
 	}
 	
 	/*
@@ -288,13 +320,11 @@ end:
 	/*
 	 * Desalocando memória
 	 */
-	//free(AGM);
+	free(AGM);
 	
-	/*
 	for (i = 0; i < N; i++) {
 		free(g.vertices[i].arestas);
 	}
-	*/
 	
 	free(g.vertices);
 	
