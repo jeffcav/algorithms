@@ -120,7 +120,7 @@ static void unir_conjuntos(struct conjunto *u, struct conjunto *v)
 int main(int argc, char *argv[])
 {
 	struct grafo g;
-	int N, i, j, k, agm_size, narestas;
+	int N, i, j, k, u, agm_size, narestas;
 	int origem, destino;
 	
 	struct conjunto *conjuntos;
@@ -323,13 +323,12 @@ int main(int argc, char *argv[])
 		goto end;
 	}
 	
-	/*
-	 * Selecionar qual aresta saira da AGM
-	 * 
+	/* 
 	 * Primeiro buscaremos na lista ordenada de arestas qual foi a ultima 
 	 * a ser adicionada antes da posicao da aresta modificada.
 	 */
 	
+	/*
 	int found = 0;
 	for (k = i-1; k > 0; k--) {
 		for (j = agm_size-1; j > 0; j--) {
@@ -341,12 +340,20 @@ int main(int argc, char *argv[])
 		if (found)
 			break;
 	}
+	*/
+	
+	k = i-1;
+	for (j = agm_size-1; j > 0; j--) {
+		if (AGM[j]->peso >= ordenada[i]->peso)
+			break;
+	}
+	
+	
 	
 	/*
 	 * Removeremos da estrutura de dados todas as arestas a partir da
 	 * ultima na AGM que esta antes da aresta modificada.
 	 */
-	int u;
 	for(u = j+1; u < agm_size; u++){
 		conjuntos[AGM[u]->destino->nome].pai = &conjuntos[AGM[u]->destino->nome];
 		conjuntos[AGM[u]->origem->nome].pai = &conjuntos[AGM[u]->origem->nome];
