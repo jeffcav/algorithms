@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "grafo.h"
+#include <string.h>
 
 static void ordenar_arestas(struct grafo *g, struct aresta **ord)
 {
@@ -83,6 +84,9 @@ int main(int argc, char *argv[])
 	struct aresta modificada;
 	struct aresta *swap;
 	
+	//variavel de teste
+	struct conjunto *c;
+	
 	scanf("%d", &N);
 	narestas = (N*(N-1))/2;
 	printf("Inicializando grafo com %d vertices e %d arestas.\n", N, narestas);
@@ -123,7 +127,7 @@ int main(int argc, char *argv[])
 	 */
 	printf("Ordenando arestas...\n");
 	
-	ordenada =  (struct aresta**) malloc(narestas * sizeof(struct aresta*));
+	ordenada = (struct aresta**) malloc(narestas * sizeof(struct aresta*));
 	ordenar_arestas(&g, ordenada);
 	
 	for (i = 0; i < narestas; i++) {
@@ -164,13 +168,22 @@ int main(int argc, char *argv[])
 		       AGM[i]->destino->nome, AGM[i]->peso);
 	}
 	
-	for (i = 0; i < N; i++) {
-		printf("aresta: %d, raiz: %d pai: %d\n", 
-		       conjuntos[i].vert->nome,
-			((struct conjunto*)raiz_conjunto(&conjuntos[i]))->vert->nome,
-			conjuntos[i].pai->vert->nome
+	printf("\n\n");
+	for (k = 0; k < N; k++) {
+		c = raiz_conjunto(&conjuntos[k]);
+		printf("aresta: %d, raiz: %d pai: %d pos: %d\n", 
+			conjuntos[k].vert->nome,
+			c->vert->nome,
+			conjuntos[k].pai->vert->nome,
+			conjuntos[k].pos
 			);
 	}
+	
+	
+	
+	
+	
+	
 	
 	/*
 	 * Ler mudança de peso em aresta (5.22)
@@ -199,6 +212,10 @@ int main(int argc, char *argv[])
 			break;
 	}
 	
+	if (j == narestas || i == narestas) {
+		printf("Erro: aresta nao existe.\n");
+	}
+	
 	/*
 	 * Reposicionar aresta modificada no vetor de arestas ordenadas
 	 */
@@ -222,13 +239,17 @@ int main(int argc, char *argv[])
 		}
 		*/
 		
+		
 		ordenada[j]->peso = modificada.peso;
 		while (ordenada[i]->peso > ordenada[j]->peso) {
 			swap = ordenada[j-1];
 			ordenada[j-1] = ordenada[j];
 			ordenada[j] = swap;
 			j--;
+			if (j == i)
+				break;
 		}
+		
 	} else { //PESO AUMENTOU
 		printf("Peso aumentou");
 		for (k = 0; k < agm_size; k++) { //SE NAO ESTA NA AGM, NADA A FAZER
@@ -253,13 +274,54 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	for (i = 0; i < narestas; i++) {
-		printf("origem=%d, destino=%d, peso=%d\n", ordenada[i]->origem->nome, ordenada[i]->destino->nome, ordenada[i]->peso);
+	for (k = 0; k < narestas; k++) {
+		printf("origem=%d, destino=%d, peso=%d\n", 
+			ordenada[k]->origem->nome, 
+			ordenada[k]->destino->nome, 
+			ordenada[k]->peso);
 	}
 	
 	/*
 	 * TODO: Cortar subárvore não ótima
 	 */
+	
+	int pos_origem = conjuntos[ordenada[i+1]->origem->nome].pos;
+	int pos_destino = conjuntos[ordenada[i+1]->destino->nome].pos;
+	printf("testando: %d, %d\n", ordenada[i+1]->origem->nome, ordenada[i+1]->destino->nome);
+	
+	if (pos_origem < pos_destino) {
+		printf("repai: %d\n", ordenada[i+1]->origem->nome);
+		conjuntos[ordenada[i+1]->origem->nome].pai = &conjuntos[ordenada[i+1]->origem->nome];
+	} else if (pos_origem > pos_destino) {
+		printf("repai: %d\n", ordenada[i]->origem->nome);
+		conjuntos[ordenada[i+1]->destino->nome].pai = &conjuntos[ordenada[i+1]->destino->nome];
+	}
+	
+	pos_origem = conjuntos[ordenada[i]->origem->nome].pos;
+	pos_destino = conjuntos[ordenada[i]->destino->nome].pos;
+	printf("testando: %d, %d\n", ordenada[i]->origem->nome, ordenada[i]->destino->nome);
+	if (pos_origem < pos_destino) {
+		printf("repai: %d\n", ordenada[i]->origem->nome);
+		conjuntos[ordenada[i]->origem->nome].pai = &conjuntos[ordenada[i]->origem->nome];
+	} else if (pos_origem > pos_destino) {
+		printf("repai: %d\n", ordenada[i]->origem->nome);
+		conjuntos[ordenada[i]->destino->nome].pai = &conjuntos[ordenada[i]->destino->nome];
+	} else {
+		conjuntos[ordenada[i]->destino->nome].pai = &conjuntos[ordenada[i]->destino->nome];
+		conjuntos[ordenada[i]->origem->nome].pai = &conjuntos[ordenada[i]->origem->nome];
+	}
+	
+	printf("\n\n");
+	for (k = 0; k < N; k++) {
+		c = raiz_conjunto(&conjuntos[k]);
+		printf("aresta: %d, raiz: %d pai: %d pos: %d\n", 
+			conjuntos[k].vert->nome,
+			c->vert->nome,
+			conjuntos[k].pai->vert->nome,
+			conjuntos[k].pos
+			);
+	}
+	/*
 	
 	for (i = 0; i < agm_size; i++) {
 		if( AGM[i] == ordenada[i]) {
@@ -270,6 +332,7 @@ int main(int argc, char *argv[])
 			int pos_origem = conjuntos[AGM[i]->origem->nome].pos;
 			int pos_destino = conjuntos[AGM[i]->destino->nome].pos;
 			
+			//Cortar o menor rank
 			if (pos_origem < pos_destino) { //cortar origem
 				conjuntos[AGM[i]->origem->nome].pai = &conjuntos[AGM[i]->origem->nome];
 			} else if (pos_origem > pos_destino) {
@@ -281,6 +344,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
+	*/
 	
 	/*
 	 * Nada mudou
@@ -292,8 +356,9 @@ int main(int argc, char *argv[])
 	 * TODO: Remontar parte da AGM
 	 */
 	agm_size = i;
-	for (j = i; j < N; j++) {
-		printf("%d diff %d\n", ordenada[j]->origem->nome, ordenada[j]->destino->nome);
+	printf("agm size: %d\n", agm_size);
+	for (j = 0; j < N; j++) {
+		printf("REM: %d diff %d\n", ordenada[j]->origem->nome, ordenada[j]->destino->nome);
 		
 		if (raiz_conjunto(&conjuntos[ordenada[j]->origem->nome]) !=
 			raiz_conjunto(&conjuntos[ordenada[j]->destino->nome])
@@ -303,6 +368,17 @@ int main(int argc, char *argv[])
 			
 			unir_conjuntos(&conjuntos[ordenada[j]->origem->nome], 
 				       &conjuntos[ordenada[j]->destino->nome]);
+			
+			printf("\n\n");
+			for (k = 0; k < N; k++) {
+				c = raiz_conjunto(&conjuntos[k]);
+				printf("aresta: %d, raiz: %d pai: %d pos: %d\n", 
+					conjuntos[k].vert->nome,
+					c->vert->nome,
+					conjuntos[k].pai->vert->nome,
+					conjuntos[k].pos
+					);
+			}
 		}
 	}
 	
@@ -311,6 +387,7 @@ int main(int argc, char *argv[])
 	 * Nota: agm_size deve ser igual a N-1
 	 */
 	printf("agm size=%d\n", agm_size);
+	//for (i = 0; i < agm_size; i++) {
 	for (i = 0; i < agm_size; i++) {
 		printf("%d -> %d w=%d\n", AGM[i]->origem->nome, 
 		       AGM[i]->destino->nome, AGM[i]->peso);
