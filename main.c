@@ -3,6 +3,52 @@
 #include "grafo.h"
 #include <string.h>
 
+static struct conjunto * raiz_conjunto(struct conjunto *u);
+
+void imprimir_agm(struct aresta **agm, int tam){
+	int i, peso;
+	peso = 0;
+	
+	printf("\n");
+	for (i = 0; i < tam; i++) {
+		printf("%d -> %d w=%d\n", 
+		       agm[i]->origem->nome, 
+		       agm[i]->destino->nome,
+		       agm[i]->peso);
+		peso += agm[i]->peso;
+	}
+	
+	printf("Custo total=%d\n", peso);
+}
+
+void imprimir_arestas(struct aresta **a, int n){
+	int i;
+	for (i = 0; i < n; i++) {
+		printf("origem=%d, destino=%d, peso=%d\n", 
+			a[i]->origem->nome,
+			a[i]->destino->nome,
+			a[i]->peso);
+	}
+	printf("\n");
+}
+
+void imprimir_conjuntos(struct conjunto *conjuntos, int n){
+	int i;
+	struct conjunto *c;
+	
+	printf("\n");
+	for (i = 0; i < n; i++) {
+		c = raiz_conjunto(&conjuntos[i]);
+		printf("aresta: %d, raiz: %d pai: %d pos: %d\n", 
+			conjuntos[i].vert->nome,
+			c->vert->nome,
+			conjuntos[i].pai->vert->nome,
+			conjuntos[i].pos
+			);
+	}
+	
+}
+
 static void ordenar_arestas(struct grafo *g, struct aresta **ord)
 {
 	int i, j, k, N, narestas, min;
@@ -76,7 +122,6 @@ int main(int argc, char *argv[])
 	struct grafo g;
 	int N, i, j, k, agm_size, narestas;
 	int origem, destino;
-	int peso;
 	
 	struct conjunto *conjuntos;
 	struct aresta **ordenada;
@@ -84,9 +129,6 @@ int main(int argc, char *argv[])
 	
 	struct aresta modificada;
 	struct aresta *swap;
-	
-	//variavel de teste
-	struct conjunto *c;
 	
 	scanf("%d", &N);
 	narestas = (N*(N-1))/2;
@@ -131,13 +173,7 @@ int main(int argc, char *argv[])
 	ordenada = (struct aresta**) malloc(narestas * sizeof(struct aresta*));
 	ordenar_arestas(&g, ordenada);
 	
-	for (i = 0; i < narestas; i++) {
-		printf("origem=%d, destino=%d, peso=%d\n", 
-			ordenada[i]->origem->nome,
-			ordenada[i]->destino->nome,
-			ordenada[i]->peso);
-	}
-	printf("\n");
+	imprimir_arestas(ordenada, narestas);
 	
 	/*
 	 * MONTAR SUBÁRVORES
@@ -162,31 +198,8 @@ int main(int argc, char *argv[])
 	 * Imprimindo AGM. 
 	 * Nota: agm_size deve ser igual a N-1
 	 */
-	peso = 0;
-	for (i = 0; i < agm_size; i++) {
-		printf("%d -> %d w=%d\n", AGM[i]->origem->nome, 
-		       AGM[i]->destino->nome, AGM[i]->peso);
-		
-		peso += AGM[i]->peso;
-	}
-	printf("Peso=%d\n", peso);
-	
-	printf("\n\n");
-	for (k = 0; k < N; k++) {
-		c = raiz_conjunto(&conjuntos[k]);
-		printf("aresta: %d, raiz: %d pai: %d pos: %d\n", 
-			conjuntos[k].vert->nome,
-			c->vert->nome,
-			conjuntos[k].pai->vert->nome,
-			conjuntos[k].pos
-			);
-	}
-	
-	
-	
-	
-	
-	
+	imprimir_agm(AGM, agm_size);	
+	imprimir_conjuntos(conjuntos, N);
 	
 	/*
 	 * Ler mudança de peso em aresta (5.22)
@@ -223,10 +236,12 @@ int main(int argc, char *argv[])
 	 * Reposicionar aresta modificada no vetor de arestas ordenadas
 	 */
 	
-	if (i == j)
+	if (i == j) {
+		printf("Aresta nao mudara de posicao no vetor ordenado. Nada a fazer.\n");
 		goto end;
+	}
 	
-	if (i < j) { //PESO DIMINUIU
+	if (i < j) {
 		printf("\nPeso diminuiu");
 		
 		for (k = 0; k < agm_size; k++) { //SE ESTA NA AGM, NADA A FAZER
@@ -252,7 +267,7 @@ int main(int argc, char *argv[])
 				break;
 		}
 		
-	} else { //PESO AUMENTOU
+	} else {
 		printf("\nPeso aumentou");
 		for (k = 0; k < agm_size; k++) { //SE NAO ESTA NA AGM, NADA A FAZER
 			if ((AGM[k]->origem->nome == modificada.origem->nome) &&
@@ -276,12 +291,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	
-	for (k = 0; k < narestas; k++) {
-		printf("origem=%d, destino=%d, peso=%d\n", 
-			ordenada[k]->origem->nome, 
-			ordenada[k]->destino->nome, 
-			ordenada[k]->peso);
-	}
+	imprimir_arestas(ordenada, narestas);
 	
 	/*
 	 * TODO: Cortar subárvore não ótima
@@ -289,16 +299,7 @@ int main(int argc, char *argv[])
 	conjuntos[ordenada[i]->destino->nome].pai = &conjuntos[ordenada[i]->destino->nome];
 	conjuntos[ordenada[i]->origem->nome].pai = &conjuntos[ordenada[i]->origem->nome];
 	
-	printf("\n");
-	for (k = 0; k < N; k++) {
-		c = raiz_conjunto(&conjuntos[k]);
-		printf("aresta: %d, raiz: %d pai: %d pos: %d\n", 
-			conjuntos[k].vert->nome,
-			c->vert->nome,
-			conjuntos[k].pai->vert->nome,
-			conjuntos[k].pos
-			);
-	}
+	imprimir_conjuntos(conjuntos, N);
 	
 	/*
 	 * Nada mudou
@@ -347,14 +348,14 @@ int main(int argc, char *argv[])
 	 */
 	int u;
 	for(u = j+1; u < agm_size; u++){
-		conjuntos[ordenada[u]->destino->nome].pai = &conjuntos[ordenada[u]->destino->nome];
-		conjuntos[ordenada[u]->origem->nome].pai = &conjuntos[ordenada[u]->origem->nome];
+		conjuntos[AGM[u]->destino->nome].pai = &conjuntos[AGM[u]->destino->nome];
+		conjuntos[AGM[u]->origem->nome].pai = &conjuntos[AGM[u]->origem->nome];
 	}
 	
 	/*
 	 * Inserir arestas a partir da que teve seu peso modificado
 	 */ 
-	agm_size = j+1;
+	agm_size = j;
 	for (j = k+1; j < narestas && agm_size < N-1; j++) {
 		if (raiz_conjunto(&conjuntos[ordenada[j]->origem->nome]) !=
 			raiz_conjunto(&conjuntos[ordenada[j]->destino->nome])
@@ -375,14 +376,7 @@ int main(int argc, char *argv[])
 		printf("Erro: AGM com tamanho diferente de N-1.\n");
 	}
 	
-	printf("\n");
-	peso = 0;
-	for (i = 0; i < agm_size; i++) {
-		printf("%d -> %d w=%d\n", AGM[i]->origem->nome, 
-		       AGM[i]->destino->nome, AGM[i]->peso);
-		peso += AGM[i]->peso;
-	}
-	printf("Peso=%d\n", peso);
+	imprimir_agm(AGM, agm_size);
 
 end:
 	/*
